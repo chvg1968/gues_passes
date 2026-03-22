@@ -29,9 +29,10 @@ export async function POST(req: NextRequest) {
 
     return NextResponse.json({ ...parsed, guests: validGuests, ownerName })
   } catch (err) {
-    console.error('[parse]', err)
+    const message = err instanceof Error ? err.message : String(err)
+    console.error('[parse] ERROR:', message)
     return NextResponse.json(
-      { error: 'Failed to parse reservation text. Please try again.' },
+      { error: `Failed to parse reservation text: ${message}` },
       { status: 500 }
     )
   }

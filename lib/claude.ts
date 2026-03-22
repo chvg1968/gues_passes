@@ -19,7 +19,7 @@ export interface ParsedReservation {
 
 export async function parseLodgifyText(text: string): Promise<ParsedReservation> {
   const genai = new GoogleGenerativeAI(process.env.GOOGLE_API_KEY!)
-  const model = genai.getGenerativeModel({ model: 'gemini-2.5-flash' })
+  const model = genai.getGenerativeModel({ model: 'gemini-2.5-flash-preview-05-20' })
 
   const prompt = `You are a data extraction assistant. Extract reservation information from the following Lodgify booking text and return ONLY a valid JSON object with no extra text.
 
