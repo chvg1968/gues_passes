@@ -9,52 +9,60 @@ interface PdfData extends ParsedReservation {
   signatureDate: string
 }
 
-function guestBlock(g: GuestInfo | undefined, index: number): string {
-  // First guest gets pre-filled placeholders in the labels area (matching the PDF reference)
-  const name = g?.name ?? ''
-  const email = g?.email ?? ''
-  const phone = g?.phone ?? ''
+function guestBlock(g: GuestInfo): string {
   return `
     <div class="guest-block">
-      <div class="guest-line"><span class="bold">Name of Guest</span>:&nbsp;${name}</div>
-      <div class="guest-line"><span class="bold">Guest email</span>:&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;${email}</div>
-      <div class="guest-line"><span class="bold">Guest telephone</span>:${phone}</div>
+      <div class="guest-line"><span class="bold">Name of Guest</span>:&nbsp;${g.name}</div>
+      <div class="guest-line"><span class="bold">Guest email</span>:&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;${g.email}</div>
+      <div class="guest-line"><span class="bold">Guest telephone</span>:${g.phone}</div>
     </div>`
 }
 
+const LOGO_HEADER = `
+  <div class="header">
+    <img src="${LOGO_B64}" alt="Bahia Beach Resort &amp; Golf Club" />
+  </div>`
+
 export async function generateGuestPassPdf(data: PdfData): Promise<Buffer> {
-  // 8 guest blocks — always render all 8
-  const guestBlocks = Array.from({ length: 8 }, (_, i) =>
-    guestBlock(data.guests[i], i)
-  ).join('')
+  // Only render guests that have at least a name
+  const filledGuests = data.guests.filter(g => g.name.trim().length > 0)
+  const guestBlocks = filledGuests.map(guestBlock).join('')
 
   const html = `<!DOCTYPE html>
 <html lang="en">
 <head>
 <meta charset="UTF-8"/>
 <style>
-  @import url('https://fonts.googleapis.com/css2?family=Times+New+Roman&display=swap');
-
   * { margin: 0; padding: 0; box-sizing: border-box; }
 
   body {
-    font-family: 'Times New Roman', Times, serif;
-    font-size: 11.5pt;
+    font-family: Arial, Helvetica, sans-serif;
+    font-size: 11pt;
     color: #1a1a1a;
     background: #fff;
-    padding: 52px 64px 48px 64px;
-    width: 816px; /* 8.5in at 96dpi */
   }
 
-  /* ── HEADER ── */
+  /* ── PAGES ── */
+  .page {
+    width: 816px;
+    min-height: 1056px;
+    padding: 48px 64px 48px 64px;
+    position: relative;
+  }
+  .page-break {
+    page-break-before: always;
+    break-before: always;
+  }
+
+  /* ── HEADER / LOGO ── */
   .header {
     text-align: center;
-    margin-bottom: 24px;
+    margin-bottom: 20px;
   }
   .header img {
-    width: 180px;
+    width: 170px;
     display: block;
-    margin: 0 auto 0;
+    margin: 0 auto;
   }
 
   /* ── TITLE ── */
@@ -63,17 +71,15 @@ export async function generateGuestPassPdf(data: PdfData): Promise<Buffer> {
     font-size: 20pt;
     font-weight: bold;
     line-height: 1.25;
-    margin-bottom: 20px;
-    font-family: Arial, Helvetica, sans-serif;
+    margin-bottom: 18px;
   }
 
-  /* ── INTRO PARAGRAPH ── */
+  /* ── INTRO ── */
   .intro {
-    font-size: 10pt;
+    font-size: 9.5pt;
     line-height: 1.55;
     text-align: justify;
-    margin-bottom: 22px;
-    font-family: Arial, Helvetica, sans-serif;
+    margin-bottom: 20px;
   }
   .intro a { color: #1a1a1a; text-decoration: underline; }
 
@@ -81,49 +87,68 @@ export async function generateGuestPassPdf(data: PdfData): Promise<Buffer> {
   .member-row {
     display: flex;
     justify-content: space-between;
-    margin-bottom: 18px;
-    font-family: Arial, Helvetica, sans-serif;
-    font-size: 11.5pt;
+    margin-bottom: 16px;
+    font-size: 11pt;
+    border-bottom: 1px solid #ccc;
+    padding-bottom: 10px;
   }
-  .member-row .bold { font-weight: bold; }
 
   /* ── GUEST BLOCKS ── */
   .guest-block {
-    margin-bottom: 14px;
-    font-family: Arial, Helvetica, sans-serif;
-    font-size: 10.5pt;
-    line-height: 1.45;
+    margin-bottom: 10px;
+    font-size: 10pt;
+    line-height: 1.5;
+    break-inside: avoid;
+    page-break-inside: avoid;
   }
-  .guest-line { margin-bottom: 1px; }
+  .guest-line { margin-bottom: 0; }
   .bold { font-weight: bold; }
 
-  /* ── BOTTOM DATES ── */
+  /* ── DATES / FEE — always anchored to page 1 content ── */
+  .dates-fee-section {
+    break-inside: avoid;
+    page-break-inside: avoid;
+    margin-top: 22px;
+  }
   .dates-row {
     display: flex;
     justify-content: center;
-    gap: 120px;
-    margin-top: 28px;
-    margin-bottom: 8px;
-    font-family: Arial, Helvetica, sans-serif;
-    font-size: 11pt;
+    gap: 100px;
+    margin-bottom: 6px;
+    font-size: 10.5pt;
   }
-
   .fee-row {
     text-align: center;
     font-style: italic;
-    font-family: Arial, Helvetica, sans-serif;
-    font-size: 10.5pt;
-    margin-bottom: 24px;
+    font-size: 10pt;
   }
-  .fee-line { display: inline-block; border-bottom: 1px solid #333; min-width: 80px; }
+  .underline { display: inline-block; border-bottom: 1px solid #333; min-width: 90px; }
+
+  /* ── PAGE 2 ── */
+  .received-row {
+    display: flex;
+    justify-content: space-between;
+    font-size: 10.5pt;
+    margin-bottom: 32px;
+    margin-top: 8px;
+  }
+  .received-row .field {
+    display: flex;
+    align-items: flex-end;
+    gap: 8px;
+  }
+  .received-row .field-line {
+    border-bottom: 1px solid #333;
+    min-width: 160px;
+    height: 18px;
+  }
 
   /* ── FOOTER NOTE ── */
   .footer-note {
-    font-family: Arial, Helvetica, sans-serif;
     font-size: 9.5pt;
-    line-height: 1.5;
+    line-height: 1.55;
     text-align: justify;
-    margin-bottom: 20px;
+    margin-bottom: 28px;
     color: #222;
   }
 
@@ -132,10 +157,8 @@ export async function generateGuestPassPdf(data: PdfData): Promise<Buffer> {
     display: flex;
     justify-content: space-between;
     align-items: flex-end;
-    gap: 40px;
-    margin-top: 10px;
-    font-family: Arial, Helvetica, sans-serif;
-    font-size: 10.5pt;
+    gap: 48px;
+    margin-top: 12px;
   }
   .sig-block {
     flex: 1;
@@ -144,9 +167,7 @@ export async function generateGuestPassPdf(data: PdfData): Promise<Buffer> {
     font-size: 9.5pt;
     color: #444;
   }
-  .sig-block.has-sig {
-    border-top: none;
-  }
+  .sig-block.has-sig { border-top: none; }
   .sig-img {
     max-height: 52px;
     max-width: 220px;
@@ -157,48 +178,63 @@ export async function generateGuestPassPdf(data: PdfData): Promise<Buffer> {
 </head>
 <body>
 
-  <!-- HEADER: Logo -->
-  <div class="header">
-    <img src="${LOGO_B64}" alt="Bahia Beach Resort & Golf Club" />
-  </div>
+<!-- ══════════════ PAGE 1 ══════════════ -->
+<div class="page">
 
-  <!-- TITLE -->
+  ${LOGO_HEADER}
+
   <div class="title">Resort Guest Pass<br/>Form</div>
 
-  <!-- INTRO -->
   <div class="intro">
     The Club will approve a maximum of passes based on the villa type. A nightly resort flat fee will be
     charged per night. Rental guests must be registered by the member with the Membership Office at least
     72 hours prior to the visit. Form must be sent via email to
     <a href="mailto:concierge@bahiapr.com">concierge@bahiapr.com</a>.
-    Resort passes will be issued <strong>electronically</strong> to each guest over the age of 14 years old
-    via email through <strong>ID123 App</strong> after payment of the passes is completed. If guests do not
-    have their Resort Pass the Club will deny access. The Resort pass grants access to all Club amenities:
-    Boat house, Tennis Courts, Wellness Center, Beach Club Pool, Aquavento and St. Regis Pool.
+    Resort passes will be issued <strong>electronically</strong> to each guest over the age of 14 years
+    old via email through <strong>ID123 App</strong> after payment of the passes is completed. If guests
+    do not have their Resort Pass the Club will deny access. The Resort pass grants access to all Club
+    amenities: Boat house, Tennis Courts, Wellness Center, Beach Club Pool, Aquavento and St. Regis Pool.
   </div>
 
-  <!-- MEMBER ROW -->
   <div class="member-row">
-    <div><span class="bold">Member's Name: </span>${data.ownerName}</div>
-    <div><span class="bold">Unit Number: </span>${data.propertyName}</div>
+    <div><span class="bold">Member's Name:&nbsp;</span>${data.ownerName}</div>
+    <div><span class="bold">Unit Number:&nbsp;</span>${data.propertyName}</div>
   </div>
 
-  <!-- GUEST BLOCKS -->
   ${guestBlocks}
 
-  <!-- DATES -->
-  <div class="dates-row">
-    <div>Arrival Date:&nbsp;&nbsp;<strong>${data.checkIn}</strong></div>
-    <div>Departure Date:&nbsp;&nbsp;<strong>${data.checkOut}</strong></div>
+  <!-- Dates & fee — kept together, forced onto page 1 via break-inside:avoid -->
+  <div class="dates-fee-section">
+    <div class="dates-row">
+      <div>Arrival Date:&nbsp;&nbsp;<strong>${data.checkIn}</strong></div>
+      <div>Departure Date:&nbsp;&nbsp;<strong>${data.checkOut}</strong></div>
+    </div>
+    <div class="fee-row">
+      <em>Daily Resort Fee:</em>&nbsp;<span class="underline"></span>&nbsp;&nbsp;&nbsp;
+      <em># of nights:&nbsp;<strong>${data.nights}</strong>&nbsp;&nbsp;$ Total</em>&nbsp;<span class="underline"></span>
+    </div>
   </div>
 
-  <!-- FEE ROW -->
-  <div class="fee-row">
-    <em>Daily Resort Fee:</em>&nbsp;<span class="fee-line">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;</span>&nbsp;&nbsp;
-    <em># of nights: ${data.nights} &nbsp; $ Total</em>&nbsp;<span class="fee-line">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;</span>
+</div>
+
+<!-- ══════════════ PAGE 2 ══════════════ -->
+<div class="page page-break">
+
+  ${LOGO_HEADER}
+
+  <!-- Form Request Received / Passes Delivered By -->
+  <div class="received-row">
+    <div class="field">
+      <span class="bold">Form Request Received:</span>
+      <div class="field-line">&nbsp;${data.signatureDate}</div>
+    </div>
+    <div class="field">
+      <span class="bold">Passes Delivered By:</span>
+      <div class="field-line"></div>
+    </div>
   </div>
 
-  <!-- FOOTER NOTE -->
+  <!-- Footer legal note -->
   <div class="footer-note">
     Although it is the intention of the Club to accommodate guests without inconvenience to the members,
     The Club reserves the right to limit the number of rental guests on any given day or over the course
@@ -208,7 +244,7 @@ export async function generateGuestPassPdf(data: PdfData): Promise<Buffer> {
     the Club at Bahia Beach Resort to charge my account for (i) the Resort Nightly Fee set forth.
   </div>
 
-  <!-- SIGNATURE -->
+  <!-- Signature -->
   <div class="signature-row">
     <div class="sig-block ${data.signatureDataUrl ? 'has-sig' : ''}">
       ${data.signatureDataUrl
@@ -221,6 +257,8 @@ export async function generateGuestPassPdf(data: PdfData): Promise<Buffer> {
       <div>Date</div>
     </div>
   </div>
+
+</div>
 
 </body>
 </html>`
