@@ -1,5 +1,5 @@
 const AIRTABLE_API_URL = 'https://api.airtable.com/v0'
-const TABLE_NAME = 'Data_Test'
+const TABLE_NAME = 'Data'
 const FIELD_PDF = 'Day Passes Info Received'
 
 function headers() {
