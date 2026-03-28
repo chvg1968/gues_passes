@@ -84,14 +84,6 @@ export async function sendGuestPassEmail({
           Attached is the completed Guest Pass form for this reservation.
         </p>
 
-        <div style="margin: 24px 0; font-size: 14px; line-height: 1.8;">
-          <p><strong>Guest:</strong> ${guestName}</p>
-          <p><strong>Property:</strong> ${propertyName}</p>
-          <p><strong>Stay:</strong> ${checkIn} to ${checkOut}</p>
-          <p><strong>Guests:</strong> ${adults} adults, ${children} children</p>
-          <p><strong>Reservation #:</strong> ${reservationNumber}</p>
-        </div>
-
         <p style="margin-top: 24px; font-size: 14px; line-height: 1.6; color: #555;">
           Best regards,<br/>
           <strong>Luxe Properties</strong>
