@@ -18,7 +18,7 @@ function getEmailProvider(email: string): 'resend' | 'outlook' {
   return outlookDomains.has(domain) ? 'outlook' : 'resend'
 }
 
-async function sendViaOutlook({
+async function sendViaHostinger({
   to,
   subject,
   html,
@@ -32,17 +32,17 @@ async function sendViaOutlook({
   filename: string
 }) {
   const transporter = nodemailer.createTransport({
-    host: 'smtp.office365.com',
+    host: 'smtp.hostinger.com',
     port: 587,
     secure: false,
     auth: {
-      user: process.env.OUTLOOK_USER,
-      pass: process.env.OUTLOOK_PASS,
+      user: process.env.HOSTINGER_USER,
+      pass: process.env.HOSTINGER_PASS,
     },
   })
 
   return transporter.sendMail({
-    from: `"Luxe Properties" <${process.env.OUTLOOK_USER}>`,
+    from: `"Luxe Properties" <${process.env.HOSTINGER_USER}>`,
     to,
     subject,
     html,
@@ -101,7 +101,7 @@ export async function sendGuestPassEmail({
   try {
     if (provider === 'outlook') {
       console.log('[email] Sending via Outlook to', conciergeEmail)
-      return await sendViaOutlook({ to: conciergeEmail, subject, html, pdfBuffer, filename })
+      return await sendViaHostinger({ to: conciergeEmail, subject, html, pdfBuffer, filename })
     }
 
     console.log('[email] Sending via Resend to', conciergeEmail)
@@ -119,6 +119,6 @@ export async function sendGuestPassEmail({
     return data
   } catch (err) {
     console.error('[email] Primary provider failed, falling back to Outlook:', err)
-    return await sendViaOutlook({ to: conciergeEmail, subject, html, pdfBuffer, filename })
+    return await sendViaHostinger({ to: conciergeEmail, subject, html, pdfBuffer, filename })
   }
 }
