@@ -29,7 +29,7 @@ export async function sendGuestPassEmail({
   const guestLastName = guestName.trim().split(' ').pop() ?? guestName
 
   const { data, error } = await resend.emails.send({
-    from: 'Luxe Properties <notifications@luxepropertiespr.com>',
+    from: 'Luxe Properties <notifications@mail.luxepropertiespr.com>',
     to: [conciergeEmail],
     subject: `${guestLastName} - Resort Guest Pass – ${propertyName} | ${checkIn} – ${checkOut}`,
     html: `
